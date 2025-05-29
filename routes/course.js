@@ -1,5 +1,13 @@
 import express from 'express';
-import { checkout, fetchLecture, fetchLectures, getAllCourses, getMyCourses, getSingleCourse, paymentVerification } from '../controller/course.js';
+import {
+  checkout,
+  fetchLecture,
+  fetchLectures,
+  getAllCourses,
+  getMyCourses,
+  getSingleCourse,
+  paymentVerification,
+} from '../controller/course.js';
 import { isAuth } from '../middlewares/isAuth.js';
 
 const router = express.Router();

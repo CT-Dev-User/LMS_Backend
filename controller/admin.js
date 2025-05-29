@@ -25,9 +25,9 @@ const getPublicIdFromUrl = (url) => {
   return match ? match[1] : null;
 };
 
-// Existing Admin Controllers with Cloudinary Integration
-export const createCourse = TryCatch(async (req, res) => {
-  const { title, description, category, createdBy, duration, price } = req.body;
+// Create a new course
+const createCourse = TryCatch(async (req, res) => {
+  const { title, description, category, createdBy, duration, price, assignedTo } = req.body;
   const file = req.file;
 
   if (!file) {
@@ -42,6 +42,17 @@ export const createCourse = TryCatch(async (req, res) => {
     resource_type: 'image',
   });
 
+  // If assignedTo is provided, validate it
+  if (assignedTo) {
+    const instructor = await User.findById(assignedTo);
+    if (!instructor || instructor.role !== 'instructor') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid instructor ID or user is not an instructor',
+      });
+    }
+  }
+
   await Courses.create({
     title,
     description,
@@ -50,6 +61,7 @@ export const createCourse = TryCatch(async (req, res) => {
     image: result.secure_url,
     duration,
     price,
+    assignedTo: assignedTo || null, // Assign instructor or null
   });
 
   res.status(201).json({
@@ -58,7 +70,8 @@ export const createCourse = TryCatch(async (req, res) => {
   });
 });
 
-export const addLectures = TryCatch(async (req, res) => {
+// Add lectures to a course (admin only)
+const addLectures = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'No course for this id' });
 
@@ -87,7 +100,8 @@ export const addLectures = TryCatch(async (req, res) => {
   });
 });
 
-export const deleteLecture = TryCatch(async (req, res) => {
+// Delete a lecture (admin only)
+const deleteLecture = TryCatch(async (req, res) => {
   const lecture = await Lecture.findById(req.params.id);
   if (!lecture) return res.status(404).json({ message: 'Lecture not found' });
 
@@ -100,7 +114,8 @@ export const deleteLecture = TryCatch(async (req, res) => {
   res.json({ message: 'Lecture deleted' });
 });
 
-export const deleteCourse = TryCatch(async (req, res) => {
+// Delete a course
+const deleteCourse = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found' });
 
@@ -127,7 +142,8 @@ export const deleteCourse = TryCatch(async (req, res) => {
   res.json({ message: 'Course deleted' });
 });
 
-export const getAllStats = TryCatch(async (req, res) => {
+// Get platform statistics
+const getAllStats = TryCatch(async (req, res) => {
   const totalCourses = (await Courses.find()).length;
   const totalLectures = (await Lecture.find()).length;
   const totalUsers = (await User.find()).length;
@@ -136,12 +152,14 @@ export const getAllStats = TryCatch(async (req, res) => {
   res.json({ stats });
 });
 
-export const getAllUser = TryCatch(async (req, res) => {
+// Get all users
+const getAllUser = TryCatch(async (req, res) => {
   const users = await User.find({ _id: { $ne: req.user._id } }).select('-password');
   res.json({ users });
 });
 
-export const updateRole = TryCatch(async (req, res) => {
+// Update user role
+const updateRole = TryCatch(async (req, res) => {
   const user = await User.findById(req.params.id);
   const { role } = req.body;
 
@@ -182,8 +200,8 @@ export const updateRole = TryCatch(async (req, res) => {
   });
 });
 
-// Assignment Controllers (Unchanged)
-export const createAssignment = TryCatch(async (req, res) => {
+// Create a new assignment
+const createAssignment = TryCatch(async (req, res) => {
   const { courseId } = req.params;
   const { title, description, deadline, questions } = req.body;
 
@@ -192,9 +210,9 @@ export const createAssignment = TryCatch(async (req, res) => {
     return res.status(404).json({ message: 'Course not found' });
   }
 
-  if (req.user.role !== 'instructor' && req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && course.assignedTo?.toString() !== req.user._id.toString()) {
     return res.status(403).json({
-      message: 'Only instructors or admins can create assignments',
+      message: 'Only the assigned instructor or admin can create assignments',
     });
   }
 
@@ -252,7 +270,8 @@ export const createAssignment = TryCatch(async (req, res) => {
   });
 });
 
-export const getAssignmentsByCourse = TryCatch(async (req, res) => {
+// Get assignments for a course
+const getAssignmentsByCourse = TryCatch(async (req, res) => {
   const { courseId } = req.params;
 
   const course = await Courses.findById(courseId);
@@ -285,7 +304,8 @@ export const getAssignmentsByCourse = TryCatch(async (req, res) => {
   });
 });
 
-export const submitAssignment = TryCatch(async (req, res) => {
+// Submit an assignment
+const submitAssignment = TryCatch(async (req, res) => {
   const { assignmentId } = req.params;
   const { answers } = req.body;
 
@@ -350,7 +370,8 @@ export const submitAssignment = TryCatch(async (req, res) => {
   });
 });
 
-export const deleteAssignment = TryCatch(async (req, res) => {
+// Delete an assignment
+const deleteAssignment = TryCatch(async (req, res) => {
   const { assignmentId } = req.params;
 
   const assignment = await Assignment.findById(assignmentId);
@@ -375,7 +396,8 @@ export const deleteAssignment = TryCatch(async (req, res) => {
   });
 });
 
-export const getAssignmentSubmissions = TryCatch(async (req, res) => {
+// Get assignment submissions
+const getAssignmentSubmissions = TryCatch(async (req, res) => {
   const { assignmentId } = req.params;
 
   const assignment = await Assignment.findById(assignmentId).populate({
@@ -416,7 +438,8 @@ export const getAssignmentSubmissions = TryCatch(async (req, res) => {
   });
 });
 
-export const updateSubmissionMarks = TryCatch(async (req, res) => {
+// Update assignment submission marks
+const updateSubmissionMarks = TryCatch(async (req, res) => {
   const { assignmentId, submissionId } = req.params;
   const { marks } = req.body;
 
@@ -447,3 +470,40 @@ export const updateSubmissionMarks = TryCatch(async (req, res) => {
     message: 'Marks updated successfully',
   });
 });
+
+// Get lectures for a course (admin or assigned instructor)
+const getCourseLectures = TryCatch(async (req, res) => {
+  const course = await Courses.findById(req.params.id);
+  if (!course) {
+    return res.status(404).json({ message: 'Course not found' });
+  }
+
+  if (req.user.role !== 'admin' && course.assignedTo?.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      message: 'You are not authorized to view lectures for this course',
+    });
+  }
+
+  const lectures = await Lecture.find({ course: course._id });
+  res.status(200).json({
+    success: true,
+    lectures,
+  });
+});
+
+export {
+  addLectures,
+  createAssignment,
+  createCourse,
+  deleteAssignment,
+  deleteCourse,
+  deleteLecture,
+  getAllStats,
+  getAllUser,
+  getAssignmentsByCourse,
+  getAssignmentSubmissions,
+  submitAssignment,
+  updateRole,
+  updateSubmissionMarks,
+  getCourseLectures,
+};
