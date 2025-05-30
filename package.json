@@ -24,6 +24,7 @@
     "nodemailer": "^6.9.16",
     "razorpay": "^2.9.5",
     "react-toastify": "^11.0.2",
+    "serverless-http": "^3.2.0",
     "uuid": "^11.0.3"
   },
   "devDependencies": {

@@ -75,12 +75,12 @@
 // };
 
 // startServer();
-
 import { v2 as cloudinary } from 'cloudinary';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import Razorpay from 'razorpay';
+import serverless from 'serverless-http';
 import { conn } from './database/db.js';
 
 // Load environment variables
@@ -100,7 +100,6 @@ export const instance = new Razorpay({
 });
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
@@ -134,18 +133,28 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
-// Start the server
-const startServer = async () => {
-  try {
-    await conn();
-    console.log('Database connected');
-    app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+// Database connection - moved outside handler for connection reuse
+let isConnected = false;
+
+const connectDB = async () => {
+  if (!isConnected) {
+    try {
+      await conn();
+      isConnected = true;
+      console.log('Database connected');
+    } catch (error) {
+      console.error('Database connection failed:', error);
+      throw error;
+    }
   }
 };
 
-startServer();
+// Lambda handler
+export const handler = async (event, context) => {
+  // Ensure database connection
+  await connectDB();
+  
+  // Use serverless-http to wrap Express app
+  const serverlessHandler = serverless(app);
+  return await serverlessHandler(event, context);
+};
