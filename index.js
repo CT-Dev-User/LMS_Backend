@@ -75,13 +75,14 @@
 // };
 
 // startServer();
-import { v2 as cloudinary } from 'cloudinary';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import express from 'express';
-import Razorpay from 'razorpay';
-import serverless from 'serverless-http';
-import { conn } from './database/db.js';
+
+const { v2: cloudinary } = require('cloudinary');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const express = require('express');
+const Razorpay = require('razorpay');
+const serverless = require('serverless-http');
+const { conn } = require('./database/db.js');
 
 // Load environment variables
 dotenv.config();
@@ -94,7 +95,7 @@ cloudinary.config({
 });
 
 // Razorpay
-export const instance = new Razorpay({
+const instance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
@@ -111,11 +112,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Routes
-import adminRoutes from './routes/admin.js';
-import courseRoutes from './routes/course.js';
-import questionRoutes from './routes/CourseQ.js';
-import instructorRoutes from './routes/instructor.js';
-import userRoutes from './routes/user.js';
+const adminRoutes = require('./routes/admin.js');
+const courseRoutes = require('./routes/course.js');
+const questionRoutes = require('./routes/CourseQ.js');
+const instructorRoutes = require('./routes/instructor.js');
+const userRoutes = require('./routes/user.js');
 
 app.get('/', (req, res) => {
   res.send('Server is working');
@@ -133,7 +134,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
-// Database connection - moved outside handler for connection reuse
+// Database connection
 let isConnected = false;
 
 const connectDB = async () => {
@@ -150,11 +151,14 @@ const connectDB = async () => {
 };
 
 // Lambda handler
-export const handler = async (event, context) => {
-  // Ensure database connection
+const handler = async (event, context) => {
   await connectDB();
-  
-  // Use serverless-http to wrap Express app
   const serverlessHandler = serverless(app);
   return await serverlessHandler(event, context);
 };
+
+// Export for Lambda
+module.exports.handler = handler;
+
+// Also export instance for other modules
+module.exports.instance = instance;
