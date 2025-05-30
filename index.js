@@ -76,13 +76,13 @@
 
 // startServer();
 
-const { v2: cloudinary } = require('cloudinary');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const express = require('express');
-const Razorpay = require('razorpay');
-const serverless = require('serverless-http');
-const { conn } = require('./database/db.js');
+import { v2 as cloudinary } from 'cloudinary';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+import Razorpay from 'razorpay';
+import serverless from 'serverless-http';
+import { conn } from './database/db.js';
 
 // Load environment variables
 dotenv.config();
@@ -95,7 +95,7 @@ cloudinary.config({
 });
 
 // Razorpay
-const instance = new Razorpay({
+export const instance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
@@ -112,11 +112,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Routes
-const adminRoutes = require('./routes/admin.js');
-const courseRoutes = require('./routes/course.js');
-const questionRoutes = require('./routes/CourseQ.js');
-const instructorRoutes = require('./routes/instructor.js');
-const userRoutes = require('./routes/user.js');
+import adminRoutes from './routes/admin.js';
+import courseRoutes from './routes/course.js';
+import questionRoutes from './routes/CourseQ.js';
+import instructorRoutes from './routes/instructor.js';
+import userRoutes from './routes/user.js';
 
 app.get('/', (req, res) => {
   res.send('Server is working');
@@ -134,7 +134,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
-// Database connection
+// Database connection - moved outside handler for connection reuse
 let isConnected = false;
 
 const connectDB = async () => {
@@ -152,13 +152,14 @@ const connectDB = async () => {
 
 // Lambda handler
 const handler = async (event, context) => {
+  // Ensure database connection
   await connectDB();
+  
+  // Use serverless-http to wrap Express app
   const serverlessHandler = serverless(app);
   return await serverlessHandler(event, context);
 };
 
-// Export for Lambda
-module.exports.handler = handler;
-
-// Also export instance for other modules
-module.exports.instance = instance;
+// Export both named and default for flexibility
+export { handler };
+export default handler;
