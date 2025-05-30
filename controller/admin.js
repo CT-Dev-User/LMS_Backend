@@ -1,7 +1,7 @@
 import { TryCatch } from '../middlewares/TryCatch.js';
 import { Courses } from '../models/courses.js';
 import { Lecture } from '../models/lectures.js';
-import { Meeting } from '../models/meetingData.js';
+import { Meeting } from '../models/meetingData.js'; // Restored
 import { Assignment } from '../models/assignment.js';
 import { User } from '../models/user.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -31,10 +31,7 @@ const createCourse = TryCatch(async (req, res) => {
   const file = req.file;
 
   if (!file) {
-    return res.status(400).json({
-      success: false,
-      message: 'Image is required',
-    });
+    return res.status(400).json({ success: false, message: 'Image is required' });
   }
 
   const result = await uploadToCloudinary(file.buffer, {
@@ -42,7 +39,6 @@ const createCourse = TryCatch(async (req, res) => {
     resource_type: 'image',
   });
 
-  // If assignedTo is provided, validate it
   if (assignedTo) {
     const instructor = await User.findById(assignedTo);
     if (!instructor || instructor.role !== 'instructor') {
@@ -61,16 +57,13 @@ const createCourse = TryCatch(async (req, res) => {
     image: result.secure_url,
     duration,
     price,
-    assignedTo: assignedTo || null, // Assign instructor or null
+    assignedTo: assignedTo || null,
   });
 
-  res.status(201).json({
-    success: true,
-    message: 'Course created successfully',
-  });
+  res.status(201).json({ success: true, message: 'Course created successfully' });
 });
 
-// Add lectures to a course (admin only)
+// Add lectures to a course
 const addLectures = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'No course for this id' });
@@ -94,13 +87,10 @@ const addLectures = TryCatch(async (req, res) => {
     course: course._id,
   });
 
-  res.status(200).json({
-    message: 'Lecture added successfully',
-    lecture,
-  });
+  res.status(200).json({ message: 'Lecture added successfully', lecture });
 });
 
-// Delete a lecture (admin only)
+// Delete a lecture
 const deleteLecture = TryCatch(async (req, res) => {
   const lecture = await Lecture.findById(req.params.id);
   if (!lecture) return res.status(404).json({ message: 'Lecture not found' });
@@ -127,7 +117,7 @@ const deleteCourse = TryCatch(async (req, res) => {
       if (videoPublicId) {
         await cloudinary.uploader.destroy(videoPublicId, { resource_type: 'video' });
       }
-    })
+    }),
   );
 
   const imagePublicId = getPublicIdFromUrl(course.image);
@@ -164,17 +154,11 @@ const updateRole = TryCatch(async (req, res) => {
   const { role } = req.body;
 
   if (!user) {
-    return res.status(400).json({
-      success: false,
-      message: 'User not found',
-    });
+    return res.status(400).json({ success: false, message: 'User not found' });
   }
 
   if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Only admins can update roles',
-    });
+    return res.status(403).json({ success: false, message: 'Only admins can update roles' });
   }
 
   if (!['user', 'admin', 'instructor'].includes(role)) {
@@ -185,19 +169,13 @@ const updateRole = TryCatch(async (req, res) => {
   }
 
   if (user._id.toString() === req.user._id.toString() && role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'You cannot demote yourself from admin',
-    });
+    return res.status(403).json({ success: false, message: 'You cannot demote yourself from admin' });
   }
 
   user.role = role;
   await user.save();
 
-  res.status(200).json({
-    success: true,
-    message: `Role updated to ${role}`,
-  });
+  res.status(200).json({ success: true, message: `Role updated to ${role}` });
 });
 
 // Create a new assignment
@@ -217,9 +195,7 @@ const createAssignment = TryCatch(async (req, res) => {
   }
 
   if (!questions || !Array.isArray(questions) || questions.length === 0) {
-    return res.status(400).json({
-      message: 'At least one question is required',
-    });
+    return res.status(400).json({ message: 'At least one question is required' });
   }
 
   for (const q of questions) {
@@ -231,26 +207,18 @@ const createAssignment = TryCatch(async (req, res) => {
     }
     if (q.type === 'mcq' || q.type === 'true-false') {
       if (!q.options || q.options.length === 0) {
-        return res.status(400).json({
-          message: `${q.type} questions require options`,
-        });
+        return res.status(400).json({ message: `${q.type} questions require options` });
       }
       if (q.type === 'true-false' && q.options.length !== 2) {
-        return res.status(400).json({
-          message: 'True/False questions must have exactly 2 options',
-        });
+        return res.status(400).json({ message: 'True/False questions must have exactly 2 options' });
       }
       const hasCorrect = q.options.some((opt) => opt.isCorrect);
       if (!hasCorrect) {
-        return res.status(400).json({
-          message: `${q.type} questions must have at least one correct option`,
-        });
+        return res.status(400).json({ message: `${q.type} questions must have at least one correct option` });
       }
     }
     if (q.maxMarks && q.maxMarks <= 0) {
-      return res.status(400).json({
-        message: 'Max marks must be greater than 0',
-      });
+      return res.status(400).json({ message: 'Max marks must be greater than 0' });
     }
   }
 
@@ -263,11 +231,7 @@ const createAssignment = TryCatch(async (req, res) => {
     questions,
   });
 
-  res.status(201).json({
-    success: true,
-    message: 'Assignment created successfully',
-    assignment,
-  });
+  res.status(201).json({ success: true, message: 'Assignment created successfully', assignment });
 });
 
 // Get assignments for a course
@@ -279,29 +243,22 @@ const getAssignmentsByCourse = TryCatch(async (req, res) => {
     return res.status(404).json({ message: 'Course not found' });
   }
 
-  const assignments = await Assignment.find({ course: courseId }).populate(
-    'instructor',
-    'name email'
-  );
+  const assignments = await Assignment.find({ course: courseId }).populate('instructor', 'name email');
 
   const filteredAssignments = assignments.map((assignment) => {
     if (req.user.role === 'instructor' || req.user.role === 'admin') {
       return assignment;
-    } else {
-      const studentSubmission = assignment.submissions.find((sub) =>
-        sub.student.toString() === req.user._id.toString()
-      );
-      return {
-        ...assignment.toObject(),
-        submissions: studentSubmission ? [studentSubmission] : [],
-      };
     }
+    const studentSubmission = assignment.submissions.find(
+      (sub) => sub.student.toString() === req.user._id.toString(),
+    );
+    return {
+      ...assignment.toObject(),
+      submissions: studentSubmission ? [studentSubmission] : [],
+    };
   });
 
-  res.status(200).json({
-    success: true,
-    assignments: filteredAssignments,
-  });
+  res.status(200).json({ success: true, assignments: filteredAssignments });
 });
 
 // Submit an assignment
@@ -315,28 +272,22 @@ const submitAssignment = TryCatch(async (req, res) => {
   }
 
   if (req.user.role !== 'user') {
-    return res.status(403).json({
-      message: 'Only students can submit assignments',
-    });
+    return res.status(403).json({ message: 'Only students can submit assignments' });
   }
 
   if (assignment.deadline && new Date() > assignment.deadline) {
     return res.status(400).json({ message: 'Submission deadline has passed' });
   }
 
-  const existingSubmission = assignment.submissions.find((sub) =>
-    sub.student.toString() === req.user._id.toString()
+  const existingSubmission = assignment.submissions.find(
+    (sub) => sub.student.toString() === req.user._id.toString(),
   );
   if (existingSubmission) {
-    return res.status(400).json({
-      message: 'You have already submitted this assignment',
-    });
+    return res.status(400).json({ message: 'You have already submitted this assignment' });
   }
 
   if (!answers || !Array.isArray(answers)) {
-    return res.status(400).json({
-      message: 'Answers must be provided as an array',
-    });
+    return res.status(400).json({ message: 'Answers must be provided as an array' });
   }
 
   let totalMarks = 0;
@@ -345,7 +296,6 @@ const submitAssignment = TryCatch(async (req, res) => {
     if (!question) {
       return res.status(400).json({ message: 'Invalid question index' });
     }
-
     if (question.type === 'mcq' || question.type === 'true-false') {
       const correctOption = question.options.find((opt) => opt.isCorrect);
       if (correctOption && correctOption.text === answer.answer) {
@@ -354,20 +304,12 @@ const submitAssignment = TryCatch(async (req, res) => {
     }
   }
 
-  const submission = {
-    student: req.user._id,
-    answers,
-    marks: totalMarks > 0 ? totalMarks : null,
-  };
+  const submission = { student: req.user._id, answers, marks: totalMarks > 0 ? totalMarks : null };
 
   assignment.submissions.push(submission);
   await assignment.save();
 
-  res.status(200).json({
-    success: true,
-    message: 'Assignment submitted successfully',
-    submission,
-  });
+  res.status(200).json({ success: true, message: 'Assignment submitted successfully', submission });
 });
 
 // Delete an assignment
@@ -379,10 +321,7 @@ const deleteAssignment = TryCatch(async (req, res) => {
     return res.status(404).json({ message: 'Assignment not found' });
   }
 
-  if (
-    req.user.role !== 'admin' &&
-    assignment.instructor.toString() !== req.user._id.toString()
-  ) {
+  if (req.user.role !== 'admin' && assignment.instructor.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       message: 'Only the instructor who created this assignment or an admin can delete it',
     });
@@ -390,10 +329,7 @@ const deleteAssignment = TryCatch(async (req, res) => {
 
   await assignment.deleteOne();
 
-  res.status(200).json({
-    success: true,
-    message: 'Assignment deleted successfully',
-  });
+  res.status(200).json({ success: true, message: 'Assignment deleted successfully' });
 });
 
 // Get assignment submissions
@@ -409,10 +345,7 @@ const getAssignmentSubmissions = TryCatch(async (req, res) => {
     return res.status(404).json({ message: 'Assignment not found' });
   }
 
-  if (
-    req.user.role !== 'admin' &&
-    assignment.instructor.toString() !== req.user._id.toString()
-  ) {
+  if (req.user.role !== 'admin' && assignment.instructor.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       message: 'You are not authorized to view submissions for this assignment',
     });
@@ -431,11 +364,7 @@ const getAssignmentSubmissions = TryCatch(async (req, res) => {
     })),
   }));
 
-  res.status(200).json({
-    success: true,
-    assignmentTitle: assignment.title,
-    submissions,
-  });
+  res.status(200).json({ success: true, assignmentTitle: assignment.title, submissions });
 });
 
 // Update assignment submission marks
@@ -448,10 +377,7 @@ const updateSubmissionMarks = TryCatch(async (req, res) => {
     return res.status(404).json({ message: 'Assignment not found' });
   }
 
-  if (
-    req.user.role !== 'admin' &&
-    assignment.instructor.toString() !== req.user._id.toString()
-  ) {
+  if (req.user.role !== 'admin' && assignment.instructor.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       message: 'You are not authorized to update marks for this assignment',
     });
@@ -465,13 +391,10 @@ const updateSubmissionMarks = TryCatch(async (req, res) => {
   submission.marks = marks;
   await assignment.save();
 
-  res.status(200).json({
-    success: true,
-    message: 'Marks updated successfully',
-  });
+  res.status(200).json({ success: true, message: 'Marks updated successfully' });
 });
 
-// Get lectures for a course (admin or assigned instructor)
+// Get lectures for a course
 const getCourseLectures = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
   if (!course) {
@@ -485,10 +408,44 @@ const getCourseLectures = TryCatch(async (req, res) => {
   }
 
   const lectures = await Lecture.find({ course: course._id });
-  res.status(200).json({
-    success: true,
-    lectures,
-  });
+  res.status(200).json({ success: true, lectures });
+});
+
+// Get students enrolled in a course
+const getStudentsByCourse = TryCatch(async (req, res) => {
+  const course = await Courses.findById(req.params.id);
+  if (!course) {
+    return res.status(404).json({ message: 'Course not found' });
+  }
+
+  if (req.user.role !== 'admin' && course.assignedTo?.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      message: 'You are not authorized to view students for this course',
+    });
+  }
+
+  const students = await User.find({
+    role: 'user',
+    subscription: { $in: [course._id] },
+  }).select('_id name email');
+
+  res.status(200).json({ success: true, students });
+});
+
+// Get courses assigned to an instructor
+const getInstructorCourses = TryCatch(async (req, res) => {
+  const instructorId = req.user._id;
+
+  if (req.user.role !== 'instructor' && req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Only instructors or admins can access this resource',
+    });
+  }
+
+  const courses = await Courses.find({ assignedTo: instructorId }).select('_id title');
+
+  res.status(200).json({ success: true, courses });
 });
 
 export {
@@ -506,4 +463,6 @@ export {
   updateRole,
   updateSubmissionMarks,
   getCourseLectures,
+  getStudentsByCourse,
+  getInstructorCourses,
 };
